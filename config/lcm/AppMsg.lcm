@@ -1,0 +1,59 @@
+package AppMsg;
+
+struct CleanCmd_t
+{
+    boolean enable;
+}
+
+struct DutyCmd_t
+{
+    int32_t duty;
+}
+
+struct SpdCmd_t
+{
+    float vspd;
+    float wspd;
+}
+
+struct AppCmd_t
+{
+    int64_t timestamp_us;
+    string CmdName;
+
+    int8_t cmd_id;
+    string cmd_data_type;
+    int8_t int_value;
+    string string_value;
+
+    float SectionCleanPx1;
+    float SectionCleanPy1;
+    float SectionCleanPx2;
+    float SectionCleanPy2;
+    float SectionCleanPx3;
+    float SectionCleanPy3;
+    float SectionCleanPx4;
+    float SectionCleanPy4;
+
+    float SpotCleanPx1;
+    float SpotCleanPy1;
+
+    float RemoteCtrlWSpd;
+    float RemoteCtrlVSpd;
+
+    int32_t SpeechIndex;
+
+    int32_t Volume;
+
+    int32_t FanDuty;
+}
+
+struct AppReturn_t
+{
+    int64_t timestamp_us;
+    string HandledCmdName;
+
+    float CleanAreaSize;
+    float CleanTimeConsume;
+ 
+}

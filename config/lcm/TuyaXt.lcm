@@ -1,0 +1,121 @@
+
+package  TuyaMsg;
+
+struct TuyaXtPDO_t
+{
+    int64_t timestamp_us;
+    int32_t seq;
+    int32_t keyNum;
+    int32_t keyArray[keyNum];
+    int32_t valueNum;
+    int32_t valueArray[valueNum];
+
+    int32_t     virWallNum;
+    float       virWallPoses[virWallNum];
+    int32_t     mopNum;
+    float       mopPoses[mopNum];  
+    int32_t     bothNum;
+    float       bothPoses[bothNum];
+    int32_t     zoneNum;
+    float       zonePoses[zoneNum];
+    int32_t     spotNum;
+    float       spotPoses[spotNum];
+
+    int32_t     roomSplitId;
+    int32_t     roomSplitLineDataLen;
+    float       roomSplitLineData[roomSplitLineDataLen];
+
+    int32_t     roomMergeIdNum;
+    int32_t     roomMergeIdArray[roomMergeIdNum];
+
+    boolean     roomReset;
+
+    int32_t     roomPropertyNum;
+    int32_t     roomProperties[roomPropertyNum];
+
+    int32_t     roomNameNum;
+    int32_t     roomNameId[roomNameNum];
+    string      roomNameArray[roomNameNum];
+
+    int32_t     roomCleanNum;
+    int32_t     roomCleanSeq[roomCleanNum];
+
+    /* Robot Cmd */
+    boolean Rob_3dObsAvoidEnable;
+    int32_t Robo_ErrCode;
+    int32_t Rob_BackToCleanInternal;
+    
+    /* Station Cmd */
+    int32_t Sta_Status;
+    int32_t Sta_WashMopMode;
+    boolean Sta_AutoDustCollection;
+    int32_t Sta_AutoDustCollectionInternal;
+    boolean Sta_AutoDry;
+    int32_t Sta_AutoWashWithPara;
+    boolean Sta_AutoCarpetTurbo;
+    boolean Sta_AutoFluid;
+    boolean Sta_KeyLedOn;
+    boolean Sta_ScreenLedOn;
+    boolean Sta_KidLockOn;
+    int32_t Sta_Sn;
+    int32_t Sta_Version;
+    
+    int32_t Sta_ErrCode;
+}
+
+struct TuyaCmd_t
+{
+    int8_t      cmd_id;
+    string      cmd_data_type;
+    int8_t      int_value;
+    string      string_value;
+    int8_t      byte_len; 
+    byte        byte_data[byte_len];
+}
+
+struct RobotStatusReporter_t
+{
+    int64_t     timestamp_us;
+    int32_t     mode;
+    int32_t     status;
+    int32_t     clean_time_Min;
+    int32_t     clean_area_MM;
+    int32_t     battery_percentage;
+    int32_t     suction;
+    int32_t     cistern;      
+    int32_t     edge_brush_life_Min;
+    int32_t     roll_brush_life_Min;
+    int32_t     filter_life_Min;
+    int32_t     rag_life_min;
+    int32_t     volume_set;
+}
+
+struct VirWallAndPolygen_t
+{
+    int64_t     timestamp_us;
+    int32_t     virWallNum;
+    float       virWallPoses[virWallNum];
+    int32_t     polygenNum;
+    float       polygenPoses[polygenNum];    
+}
+
+struct RespForAppTaskAndRobot_t
+{
+    int64_t     timestamp_us;
+    int64_t     respTs_us;
+}
+
+struct AppTaskCmd_t
+{
+    int64_t     timestamp_us;
+    string      cmdStr;
+    boolean     value;
+    VirWallAndPolygen_t virPlygen;
+}
+
+struct TaskFinishStatus_t
+{
+    int64_t     timestamp_us;
+    int32_t     key;
+    boolean     value;
+}

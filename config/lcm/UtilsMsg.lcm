@@ -1,0 +1,22 @@
+package UtilsMsg;
+
+struct TimerSyncReq_t
+{
+    int64_t timestamp_us;
+    string callName;
+}
+
+struct TimerSync_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t originSecond;
+}
+
+struct RpcCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t key;    // 
+    int32_t value;
+}

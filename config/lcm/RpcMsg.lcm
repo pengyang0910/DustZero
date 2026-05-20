@@ -1,0 +1,61 @@
+package  RpcMsg;
+
+struct RobotData_t
+{
+    int64_t timestamp_us;
+    int32_t stateMachine;
+    int32_t workMode;
+    int8_t  robotStopped;
+}
+
+struct  RobotInfoData_t
+{
+    int64_t  timestamp_us;
+    int8_t isCharging;
+
+    int32_t robot_error;
+    int16_t station_error;
+    int16_t robot_work_error;
+
+    int8_t robot_status;
+    int8_t station_status;
+    int8_t work_mode;
+    int8_t outerTask;
+
+    int8_t battery_percent;
+    int16_t clean_area;
+    int16_t clean_time;
+
+    int8_t clean_mode;
+    int8_t suction_value;
+    int8_t sta_KidLock;
+    int8_t sta_LcdOn;
+
+    int8_t is_InStation;
+    float station_px;
+    float station_py;
+    float station_pa;
+    
+    int8_t is_clean_finished;
+}
+
+struct RobotParaData_t
+{
+    int64_t  timestamp_us;
+
+    int16_t bDataLen;
+    int8_t boolData[bDataLen];
+
+    int16_t iDataLen;
+    int16_t intData[iDataLen];
+
+    int16_t fDataLen;
+    float floatData[fDataLen];
+
+    int16_t lDataLen;
+    int32_t lData[lDataLen];
+
+    int16_t sDataLen;
+    string sData[sDataLen];
+
+ }

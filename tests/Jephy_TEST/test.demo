@@ -1,0 +1,941 @@
+/*
+ * @Author: jephy jephy.zhang@any-eye.com
+ * @Date: 2022-11-20 21:28:17
+ * @LastEditors: jephy jephy.zhang@any-eye.com
+ * @LastEditTime: 2023-07-25 12:06:17
+ * @FilePath: /xt212_navclean/test.cpp
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+
+#include <lcm/lcm-cpp.hpp>
+#include "Msg/SensorMsg/PointCloud_t.hpp"
+#include <memory>
+#include "XBase/xbase.h"
+#include "XLog/xlog.h"
+#include "Msg/NavMsg/Odom_t.hpp"
+#include <memory>
+#include "global.h"
+#include "XUtils/XCfg/xini.h"
+#include <termios.h>
+#include <assert.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include "Hmi/hmi.h"
+
+class OdomTest_t
+{
+private:
+    /* data */
+    lcm::LCM lcm;
+    lcm::Subscription* odomSub;
+    lcm::Subscription* filteredOdomSub;
+    lcm::Subscription* laserSub;
+    std::shared_ptr<XLog> xlogPtr;
+    NavMsg::Odom_t odomData;
+    NavMsg::Odom_t filteredOdomData, deltaFiltredOdom;
+    void odomMsgUpdate(const lcm::ReceiveBuffer* rbuf, 
+                        const std::string &channel, 
+                        const NavMsg::Odom_t *msg)
+    {
+        float fTs = msg->timestamp_us / 1000000.0f;
+        float wallTs = getTimeStap_us() / 1000000.0f;
+        float FTs = filteredOdomData.timestamp_us/1000000.0f;
+        xlogPtr->Debug("WallTs=%.4f fTs=%.4f odom(%.4f, %.4f, %.4f) deltaOdom(%.4f, %.4f, %.4f) FTs=%.4f FilteredOdom(%.4f, %.4f, %.4f) FilteredDeltaOdom(%.4f, %.4f, %.4f)", \
+            wallTs, fTs, msg->px, msg->py, msg->pa, \
+            odomData.px - msg->px, odomData.py - msg->py, ClipAngle(odomData.pa - msg->pa),\
+            FTs, filteredOdomData.px, filteredOdomData.py, filteredOdomData.pa, \
+            deltaFiltredOdom.px, deltaFiltredOdom.py, deltaFiltredOdom.pa);
+        odomData = *msg;
+    };
+
+    void filteredOdomMsgUpdate(const lcm::ReceiveBuffer* rbuf, 
+                        const std::string &channel, 
+                        const NavMsg::Odom_t *msg)
+    {
+        deltaFiltredOdom.px = filteredOdomData.px - msg->px;
+        deltaFiltredOdom.py = filteredOdomData.py - msg->py;
+        deltaFiltredOdom.pa = ClipAngle(filteredOdomData.pa - msg->pa);
+        filteredOdomData = *msg;
+    }
+    void laserMsgUpdate(const lcm::ReceiveBuffer* rbuf, 
+                        const std::string &channel, 
+                        const SensorMsg::LaserData_t *msg)
+    {
+        xlogPtr->Debug("Laser ts=%u ", msg->timestamp_us);
+    }
+public:
+    OdomTest_t(std::shared_ptr<XLog> xlogPtr);
+    ~OdomTest_t();
+    void SetupMsg()
+    {
+        odomSub = lcm.subscribe(LCM_CHANNEL_RawOdom, &OdomTest_t::odomMsgUpdate, this);
+        odomSub->setQueueCapacity(10);
+        filteredOdomSub = lcm.subscribe(LCM_CHANNEL_Odom, &OdomTest_t::filteredOdomMsgUpdate, this);
+        filteredOdomSub->setQueueCapacity(10);
+        //laserSub = lcm.subscribe(LCM_CHANNEL_Laser, &OdomTest_t::laserMsgUpdate, this);
+        //laserSub->setQueueCapacity(10);
+    }
+    void SpinOnce()
+    {
+        lcm.handleTimeout(1);
+    }
+};
+
+OdomTest_t::OdomTest_t(std::shared_ptr<XLog> xlogPtr)
+{
+    this->xlogPtr = xlogPtr;
+    filteredOdomData.px = 0;
+    filteredOdomData.py = 0;
+    filteredOdomData.pa = 0;
+    deltaFiltredOdom.px = 0;
+    deltaFiltredOdom.py = 0;
+    deltaFiltredOdom.pa = 0;
+    odomData.px = 0;
+    odomData.py = 0;
+    odomData.pa = 0;
+    SetupMsg();
+}
+
+OdomTest_t::~OdomTest_t()
+{
+}
+
+// odom Ts test
+int main111(int argc, char** argv)
+{
+    std::shared_ptr<XLog> xlogPtr = std::make_shared<XLog>(true);
+    xlogPtr->Initialise("test.log");
+    xlogPtr->SetThreshold(XLOG_LEVEL::XLOG_LEVEL_INFO);
+    OdomTest_t odomTest(xlogPtr);
+    bindCpuCore(BIND_CPU_ID_APP);
+    while (true)
+    {
+        /* code */
+        odomTest.SpinOnce();
+        sleep_ms(10);
+    }
+    
+}
+
+void testFrame()
+{
+    auto n1 = __builtin_frame_address(1);
+    auto n2 = __builtin_frame_address(2);
+    auto n3 = __builtin_frame_address(3);
+    //auto n4 = __builtin_frame_address(4);
+    printf("%x %x\r\n", n1, n2);// n3, n4);
+}
+
+void testIni()
+{
+    ini::IniFile myIni;
+
+    myIni["Foo"]["myInt"] = 1;
+    myIni["Foo"]["myStr"] = "Hello world";
+    myIni["Foo"]["myBool"] = true;
+    myIni["Bar"]["myDouble"] = 1.2;
+
+    myIni.save("test.ini");
+}
+void loadIni()
+{
+    //testFrame();
+    printf("%s %s %s %s\r\n", \
+    typeid(int).name(), typeid(double).name(), typeid(bool).name(), typeid(bool*).name());
+    ini::IniFile myIni;
+    myIni.setMultiLineValues(false);
+    myIni.load("test.ini");
+    double d ;
+    
+    {
+        d = myIni["Bar"][myIni.GetKey("myDouble")].as<double>();
+        double kk = myIni["Bar"][myIni.GetKey("hex")].as<double>();
+        auto mmm = myIni["Bar"]["myDouble"];
+    }
+
+    
+    
+    float k;
+    //k = myIni["Foo"]["kkk"].as<double>();
+    printf("before d = %f k = %f\r\n", d, k);
+    myIni["Bar"]["myDouble"] = d+0.3;
+    myIni.save("test.ini");
+}
+
+void testCLiffLoop()
+{
+	typedef enum
+	{
+		EST_NONE_STOPED,
+		EST_NONE_MOVING,
+		EST_BREAKING,
+		EST_SAFE_BACKWARD,
+	}emergency_stop_t;
+
+	emergency_stop_t status = EST_NONE_STOPED;
+	char c = 0;
+	std::thread([&c] 
+	{
+		while (1)
+		{
+			char tmp = getchar();
+			if ((tmp != '\n') && (tmp != '\r'))
+			{
+				c = tmp;
+				printf("%d pressed\n", (int)c);
+			}
+		}
+	}).detach();
+
+    lcm::LCM lcm_;
+    ini::IniFile cfgRobotIni;
+    ini::IniFile platFormIni;
+    cfgRobotIni.load("/mnt/UDISK/fj212/Config/robot.cfg");
+    platFormIni.load("/root/platform.cfg");
+    std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, &cfgRobotIni, &platFormIni);
+    xbasePt->Init();
+    int tick=0;
+    
+    xbasePt->MotorEnable(true);
+    int testThres = 10;
+	char bBreaking = false;
+	float test_v = 0.25;
+    while (true)
+    {
+		
+
+        /* code */
+        xbasePt->UpdateInput();
+        SensorMsg::Cliff_t cliffData = xbasePt->getCliffData();
+        RobotMsg::RobotStatus_t rStatus = xbasePt->getRobotStatus();
+
+
+		if (c ==115) // 's'
+		{
+			xbasePt->setSpeed(test_v, 0);
+			printf("[%d]ROBOT MOVE \r\n", getTimeStap_ms());
+			c = 0;
+			status = EST_NONE_MOVING;
+		}
+		
+		
+
+		if (status == EST_NONE_MOVING)
+		{
+			xbasePt->setSpeed(test_v, 0);
+			if (rStatus.cliffLeftAdc < testThres ||
+				rStatus.cliffLeftLeftAdc < testThres ||
+				rStatus.cliffLeftFrontAdc < testThres ||
+				rStatus.cliffRightAdc < testThres ||
+				rStatus.cliffRightFrontAdc < testThres ||
+				rStatus.cliffRightRightAdc < testThres)
+			{
+				xbasePt->setSpeed(-0.35, 0);
+				printf("[%d]ROBOT BREAK!!!!\r\n", getTimeStap_ms());
+				status = EST_BREAKING;
+			}
+
+		}
+		else if ((status == EST_BREAKING))
+		{
+			if (rStatus.fdkVSpdMm < 20)
+			{
+				xbasePt->setSpeed(0, 0);
+				printf("[%d]ROBOT STOP!!!!\r\n", getTimeStap_ms());
+				status = EST_NONE_STOPED;
+			}
+		}
+           
+
+        xbasePt->UpdateOutput();
+    }
+    
+}
+
+int test_stop()
+{
+	char cmd = 0;
+	float running_v = 0.3;
+	float running_w_degree_s = 0;
+	std::thread([&cmd, &running_v, &running_w_degree_s]
+	{
+		while (1)
+		{
+			char tmp = getchar();
+			if (tmp == 'i')
+			{
+				scanf("%f %f", &running_v, &running_w_degree_s);
+				printf("set speed as %f m/s, %f degree/s\n", running_v, running_w_degree_s);
+			}
+			else if ((tmp != '\n') && (tmp != '\r'))
+			{
+				cmd = tmp;
+				printf("%d pressed\n", (int)cmd);
+			}
+			
+		}
+	}).detach();
+
+	
+	lcm::LCM lcm_;
+	ini::IniFile cfgRobotIni;
+	ini::IniFile platFormIni;
+	cfgRobotIni.load("/mnt/UDISK/fj212/Config/robot.cfg");
+	platFormIni.load("/root/platform.cfg");
+	std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, &cfgRobotIni, &platFormIni);
+	xbasePt->Init();
+	int tick = 0;
+
+	xbasePt->MotorEnable(true);
+	xbasePt->setSpeed(0, 0);
+
+	bool bRUnning = false;
+	bool bStoping = false;
+	
+#ifdef V_PLANING
+	float planning_v = running_v;
+	float step = 0.02;
+#endif
+	RobotMsg::RobotStatus_t stop_trig_status;
+	uint32_t stop_trig_ts_ms = 0;
+
+	printf("press a to start robot, press s to stop robot, presess \'i vv ww\' (vv means m/s, ww means degree/s) to set speed！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！\n");
+	while (true)
+	{
+		/* code */
+		xbasePt->UpdateInput();
+		RobotMsg::RobotStatus_t rStatus = xbasePt->getRobotStatus();
+
+		if (cmd == 'a')
+		{
+			cmd = 0;
+			bRUnning = true;
+			bStoping = false;
+			xbasePt->setSpeed(running_v, DEGREE2RAD(running_w_degree_s));
+		}
+		else if (cmd == 's')
+		{
+			cmd = 0;
+			bRUnning = false;
+			bStoping = true;
+			
+			printf("[%d] Stoping!!!!! %d %d %d\n", getTimeStap_ms(), rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad);
+			stop_trig_status = rStatus;
+			stop_trig_ts_ms = getTimeStap_ms();
+#ifdef V_PLANING
+			planning_v = running_v;
+			xbasePt->setSpeed(planning_v, 0);
+#else
+			xbasePt->setSpeed(0, 0);
+#endif
+		}
+
+		if (bRUnning)
+		{
+			xbasePt->setSpeed(running_v, DEGREE2RAD(running_w_degree_s));
+		}
+
+		if (bStoping)
+		{
+#ifdef V_PLANING
+			planning_v = planning_v - step;
+			if (planning_v < 0.05)
+				planning_v = 0;
+
+			xbasePt->setSpeed(planning_v, 0);
+#endif
+			if (abs(rStatus.fdkVSpdMm) < 1 && abs(rStatus.fdkWSpdMilliRad) < 1)
+			{
+				bRUnning = false;
+				bStoping = false;
+				printf("[%d] Stoped! %d %d %d\n", getTimeStap_ms(), rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad);
+				uint32_t ts_ms = getTimeStap_ms();
+				uint32_t dist_mm = std::sqrt((rStatus.xPosMm - stop_trig_status.xPosMm)* (rStatus.xPosMm - stop_trig_status.xPosMm) +
+					(rStatus.yPosMm - stop_trig_status.yPosMm)* (rStatus.yPosMm - stop_trig_status.yPosMm));
+				float diff_angle = RAD2DEGREE((rStatus.yawMilliRad - stop_trig_status.yawMilliRad) / 1000.0);
+				printf("BREAKING DISTANCE is %d mm, angle is %f, cost %d ms\n", dist_mm, diff_angle, ts_ms - stop_trig_ts_ms);
+
+
+			}
+		}
+		xbasePt->UpdateOutput();
+	}
+}
+
+
+int test_step_move()
+{
+	char cmd = 0;
+	float max_w_degree_s = 90;
+	float max_v_mm_s = 0.3;
+	float set_dist_mm = 0;
+	float set_angle_degree = 0;
+	bool bVMove = false;
+	bool bWMove = false;
+	std::thread([&]
+	{
+		while (1)
+		{
+			char tmp = getchar();
+			if (tmp == 'v')
+			{
+				scanf("%f %f", &set_dist_mm, &max_v_mm_s);
+				printf("[Step Move] Line: %f mm, max speed is %f mm/s\n", set_dist_mm, max_v_mm_s);
+				bVMove = true;
+				bWMove = false;
+			}
+			else if (tmp == 'w')
+			{
+				scanf("%f %f", &set_angle_degree, &max_w_degree_s);
+				printf("[Step Move] Rotate: %f mm, max speed is %f mm/s\n", set_angle_degree, max_w_degree_s);
+				bVMove = false;
+				bWMove = true;
+			}
+			else if ((tmp != '\n') && (tmp != '\r'))
+			{
+				cmd = tmp;
+				printf("%d pressed\n", (int)cmd);
+			}
+
+		}
+	}).detach();
+
+
+	lcm::LCM lcm_;
+	ini::IniFile cfgRobotIni;
+	ini::IniFile platFormIni;
+	cfgRobotIni.load("/mnt/UDISK/fj212/Config/robot.cfg");
+	platFormIni.load("/root/platform.cfg");
+	std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, &cfgRobotIni, &platFormIni);
+	xbasePt->Init();
+	int tick = 0;
+
+	xbasePt->MotorEnable(true);
+	xbasePt->setSpeed(0, 0);
+
+	printf("press a to start robot, press s to stop robot\n");
+	printf("presess \'v dist maxV\' (dist unit is mm, maxV unit is mm_s) to set Linear Move\n");
+	printf("presess \'w angle maxW\' (angle unit is degree, maxW unit is degree_s) to set Rotation Move\n");
+
+	bool bRunning = false;
+	RobotMsg::RobotStatus_t startStatus = xbasePt->getRobotStatus();
+	float markPos_mm = 0;
+	float markPos_degree = 0;
+	bool bHalfMoved = false;
+	while (true)
+	{
+		/* code */
+		xbasePt->UpdateInput();
+		RobotMsg::RobotStatus_t rStatus = xbasePt->getRobotStatus();
+
+		if (cmd == 'a')
+		{
+			bRunning = true;
+			startStatus = rStatus;
+			cmd = 0;
+			markPos_mm = -1;
+			markPos_degree = -1;
+			bHalfMoved = false;
+			printf("[%d] Start! %d %d %d\n", getTimeStap_ms(), rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad);
+		}
+		else if (cmd == 's')
+		{
+
+		}
+
+		if (bRunning)
+		{
+
+			if (bVMove)
+			{
+				float movedDist = std::sqrt((rStatus.xPosMm - startStatus.xPosMm) * (rStatus.xPosMm - startStatus.xPosMm) + 
+					(rStatus.yPosMm - startStatus.yPosMm) * (rStatus.yPosMm - startStatus.yPosMm));
+				if (movedDist < set_dist_mm / 2)
+				{
+					if (std::abs(rStatus.fdkVSpdMm - max_v_mm_s) < 5 && markPos_mm < 0)
+					{
+						markPos_mm = movedDist;
+					}
+					xbasePt->setSpeed(max_v_mm_s/1000.0, 0);
+				}
+				else
+				{
+					bHalfMoved = true;
+					if (markPos_mm < 0)
+					{
+						markPos_mm = set_dist_mm / 2;
+					}
+					if (set_dist_mm - movedDist < markPos_mm)
+					{
+						xbasePt->setSpeed(0, 0);
+					}
+					else
+					{
+						xbasePt->setSpeed(max_v_mm_s / 1000.0, 0);
+					}
+				}
+
+			}
+			else if (bWMove)
+			{
+				float movedAngle = std::fabs(RAD2DEGREE(rStatus.yawMilliRad / 1000.0) - RAD2DEGREE(startStatus.yawMilliRad/1000.0));
+				if (movedAngle < set_angle_degree / 2)
+				{
+					if (std::abs(RAD2DEGREE(rStatus.fdkWSpdMilliRad / 1000.0) - max_w_degree_s) < 3 && markPos_degree < 0)
+					{
+						markPos_degree= movedAngle;
+					}
+					xbasePt->setSpeed(0, DEGREE2RAD(set_angle_degree));
+				}
+				else
+				{
+					bHalfMoved = true;
+					if (markPos_degree < 0)
+					{
+						markPos_degree = set_angle_degree / 2;
+					}
+					if (set_angle_degree - movedAngle < markPos_degree)
+					{
+						xbasePt->setSpeed(0, 0);
+					}
+					else
+					{
+						xbasePt->setSpeed(0, DEGREE2RAD(set_angle_degree));
+					}
+				}
+			}
+
+
+			if (bHalfMoved  && abs(rStatus.fdkVSpdMm) < 1 && abs(rStatus.fdkWSpdMilliRad) < 1)
+			{
+				bRunning = false;
+				printf("[%d] Stoped! %d %d %d\n", getTimeStap_ms(), rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad);
+
+				if (bVMove)
+				{
+					float movedDist = std::sqrt((rStatus.xPosMm - startStatus.xPosMm) * (rStatus.xPosMm - startStatus.xPosMm) +
+						(rStatus.yPosMm - startStatus.yPosMm) * (rStatus.yPosMm - startStatus.yPosMm));
+					printf("[%d] Moved distance is %f mm, error %f\n", getTimeStap_ms(), movedDist,  movedDist - set_dist_mm);
+				}
+				else
+				{
+					float movedAngle = std::fabs(RAD2DEGREE(rStatus.yawMilliRad / 1000.0) - RAD2DEGREE(startStatus.yawMilliRad / 1000.0));
+					printf("[%d] Moved angle is %f degree, error %f\n", getTimeStap_ms(), movedAngle, movedAngle - set_angle_degree);
+
+				}
+			}
+		}
+
+		xbasePt->UpdateOutput();
+	}
+
+}
+
+#if 0  //WQ TODO
+int test_step_move2()
+{
+	char cmd = 0;
+	float max_w_degree_s = 90;
+	float max_v_mm_s = 0.3;
+	float set_dist_mm = 0;
+	float set_angle_degree = 0;
+	bool bVMove = false;
+	bool bWMove = false;
+#define ACC_LINEAR_MM_S2 
+	std::thread([&]
+	{
+		while (1)
+		{
+			char tmp = getchar();
+			if (tmp == 'v')
+			{
+				scanf("%f %f", &set_dist_mm, &max_v_mm_s);
+				printf("[Step Move] Line: %f mm, max speed is %f mm/s\n", set_dist_mm, max_v_mm_s);
+				bVMove = true;
+				bWMove = false;
+			}
+			else if (tmp == 'w')
+			{
+				scanf("%f %f", &set_angle_degree, &max_w_degree_s);
+				printf("[Step Move] Rotate: %f mm, max speed is %f mm/s\n", set_angle_degree, max_w_degree_s);
+				bVMove = false;
+				bWMove = true;
+			}
+			else if ((tmp != '\n') && (tmp != '\r'))
+			{
+				cmd = tmp;
+				printf("%d pressed\n", (int)cmd);
+			}
+
+		}
+	}).detach();
+
+
+	lcm::LCM lcm_;
+	ini::IniFile cfgRobotIni;
+	ini::IniFile platFormIni;
+	cfgRobotIni.load("/mnt/UDISK/fj212/Config/robot.cfg");
+	platFormIni.load("/root/platform.cfg");
+	std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, &cfgRobotIni, &platFormIni);
+	xbasePt->Init();
+	int tick = 0;
+
+	xbasePt->MotorEnable(true);
+	xbasePt->setSpeed(0, 0);
+
+	printf("press a to start robot, press s to stop robot\n");
+	printf("presess \'v dist maxV\' (dist unit is mm, maxV unit is mm_s) to set Linear Move\n");
+	printf("presess \'w angle maxW\' (angle unit is degree, maxW unit is degree_s) to set Rotation Move\n");
+
+	bool bRunning = false;
+	RobotMsg::RobotStatus_t startStatus = xbasePt->getRobotStatus();
+	
+	while (true)
+	{
+		/* code */
+		xbasePt->UpdateInput();
+		RobotMsg::RobotStatus_t rStatus = xbasePt->getRobotStatus();
+
+		if (cmd == 'a')
+		{
+			bRunning = true;
+			startStatus = rStatus;
+			cmd = 0;
+			printf("[%d] Start %s move! %d %d %d, with speed %f %s\n", getTimeStap_ms(), bVMove?"Linear":"Rotation",rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad,
+				0.1f, bVMove ? "mm_s" : "degree_s");
+		}
+		else if (cmd == 's')
+		{
+
+		}
+
+		if (bRunning)
+		{
+
+			if (bVMove)
+			{
+				float movedDist = std::sqrt((rStatus.xPosMm - startStatus.xPosMm) * (rStatus.xPosMm - startStatus.xPosMm) +
+					(rStatus.yPosMm - startStatus.yPosMm) * (rStatus.yPosMm - startStatus.yPosMm));
+				if (movedDist < set_dist_mm / 2)
+				{
+					if (std::abs(rStatus.fdkVSpdMm - max_v_mm_s) < 5 && markPos_mm < 0)
+					{
+						markPos_mm = movedDist;
+					}
+					xbasePt->setSpeed(max_v_mm_s / 1000.0, 0);
+				}
+				else
+				{
+					bHalfMoved = true;
+					if (markPos_mm < 0)
+					{
+						markPos_mm = set_dist_mm / 2;
+					}
+					if (set_dist_mm - movedDist < markPos_mm)
+					{
+						xbasePt->setSpeed(0, 0);
+					}
+					else
+					{
+						xbasePt->setSpeed(max_v_mm_s / 1000.0, 0);
+					}
+				}
+
+			}
+			else if (bWMove)
+			{
+				float movedAngle = std::fabs(RAD2DEGREE(rStatus.yawMilliRad / 1000.0) - RAD2DEGREE(startStatus.yawMilliRad / 1000.0));
+				if (movedAngle < set_angle_degree / 2)
+				{
+					if (std::abs(RAD2DEGREE(rStatus.fdkWSpdMilliRad / 1000.0) - max_w_degree_s) < 3 && markPos_degree < 0)
+					{
+						markPos_degree = movedAngle;
+					}
+					xbasePt->setSpeed(0, DEGREE2RAD(set_angle_degree));
+				}
+				else
+				{
+					bHalfMoved = true;
+					if (markPos_degree < 0)
+					{
+						markPos_degree = set_angle_degree / 2;
+					}
+					if (set_angle_degree - movedAngle < markPos_degree)
+					{
+						xbasePt->setSpeed(0, 0);
+					}
+					else
+					{
+						xbasePt->setSpeed(0, DEGREE2RAD(set_angle_degree));
+					}
+				}
+			}
+
+
+			if (bHalfMoved  && abs(rStatus.fdkVSpdMm) < 1 && abs(rStatus.fdkWSpdMilliRad) < 1)
+			{
+				bRunning = false;
+				printf("[%d] Stoped! %d %d %d\n", getTimeStap_ms(), rStatus.xPosMm, rStatus.yPosMm, rStatus.yawMilliRad);
+
+				if (bVMove)
+				{
+					float movedDist = std::sqrt((rStatus.xPosMm - startStatus.xPosMm) * (rStatus.xPosMm - startStatus.xPosMm) +
+						(rStatus.yPosMm - startStatus.yPosMm) * (rStatus.yPosMm - startStatus.yPosMm));
+					printf("[%d] Moved distance is %f mm, error %f\n", getTimeStap_ms(), movedDist, movedDist - set_dist_mm);
+				}
+				else
+				{
+					float movedAngle = std::fabs(RAD2DEGREE(rStatus.yawMilliRad / 1000.0) - RAD2DEGREE(startStatus.yawMilliRad / 1000.0));
+					printf("[%d] Moved angle is %f degree, error %f\n", getTimeStap_ms(), movedAngle, movedAngle - set_angle_degree);
+
+				}
+			}
+		}
+
+		xbasePt->UpdateOutput();
+	}
+
+}
+#endif
+
+void test_moveLine()
+{
+	lcm::LCM lcm_;
+	ini::IniFile cfgRobotIni;
+	ini::IniFile platFormIni;
+	cfgRobotIni.load("/mnt/UDISK/fj212/Config/robot.cfg");
+	platFormIni.load("/root/platform.cfg");
+	std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, &cfgRobotIni, &platFormIni);
+	float Kp = cfgRobotIni.GetProperty("Test", "Kp").as<float>();
+	float Ki = cfgRobotIni.GetProperty("Test", "Ki").as<float>();
+	float Ui = 0;
+	const float Umax = 3.14;
+	xbasePt->Init();
+	int tick = 0;
+
+	xbasePt->EnVelProfile(false);
+	xbasePt->MotorEnable(true);
+	xbasePt->setSpeed(0, 0);
+
+	float tarPa = xbasePt->getOdomPa();
+	while (true)
+	{
+		/* code */
+		xbasePt->UpdateInput();
+		float fbkPa = xbasePt->getOdomPa();
+		float err = ClipAngle(tarPa-fbkPa);
+		Ui += err;
+		if(fabs(Ui) > Umax)
+		{
+			if(Ui < -1 * Umax)
+				Ui = -1 * Umax;
+			if(Ui > Umax)
+				Ui = Umax;
+		}
+		float out = err * Kp + Ui * Ki;
+		if(fabs(out) > 2)
+		{
+			if(out < -2)
+				out = -2;
+			if(out > 2)
+				out = 2;
+		}
+		xbasePt->setSpeed(0.25, out);
+		printf("err: %.2f Ui: %.2f w:%.2f\r\n", rtod(err), rtod(Ui), rtod(out));
+
+
+		xbasePt->UpdateOutput();
+	}
+	
+}
+void test_xd1qFilter()
+{
+	std::vector<float> xd1qRawData;
+	std::ifstream inf("data.txt", std::ios::in);
+
+    std::string line;
+    int seg_id = -1;
+    while (std::getline(inf, line))
+    {
+        std::istringstream iss(line);
+        float x,y,z;
+        std::string type;
+        iss >> x >> y >> z;
+		float data = sqrt(x*x+y*y+z*z);
+		xd1qRawData.push_back(data);
+	}
+	printf("xd1qRawData.size() = %d\r\n", xd1qRawData.size());
+
+	for (int i = 0; i < xd1qRawData.size(); i++)
+	{
+
+		int j = i;
+			for (; j < XD1Q_POINT_CNT; j++)
+			{
+				/* code */
+				if(fabs(xd1qRawData[i] - xd1qRawData[j]) < 0.01) // 1cm
+				{
+					j++;
+				}
+				else 
+					break;
+			}
+
+			if(j - i > 8) // 0.15 *8 = 1.2 /deg
+			{
+				i = j; // valid
+				
+			}
+			else
+			{
+				// invalid: set data = 0
+				while (i<j)
+				{
+					/* code */
+					xd1qRawData[i] = 0;
+					i++;
+					printf("set i=%d 0\r\n", i+1);
+				}
+			}
+			
+
+			// printf("raw i=%d dis = %d (%.3f, %.3f, %.3f) \r\n", i, hwInput.m_xd1q_points[i], xd1qData.x[i], xd1qData.y[i], xd1qData.z[i]);
+			//  if(i%10 == 0)
+			//  xlogPtr->Debug("xd1q-%d: %d\t", i, hwInput.m_xd1q_points[i]);
+	}
+
+
+}
+
+#if 0
+void hmi_test()
+{
+	Hmi_t hmi;
+	int data = 1;
+	hmi.Init();
+	int tick = 0;
+	while (true)
+	{
+		/* code */
+		switch (data)
+		{
+		case 1:
+			/* code */
+			hmi.ledOff();
+			break;
+		case 2:
+			hmi.ledGreenFlashSlow();
+			break;
+		case 3:
+			hmi.ledRedFlashQuick();
+			break;
+		case 4:
+			hmi.ledWhiteFlashSlow();
+			break;
+		case 5:
+			hmi.ledWhiteOn();
+			break;
+		
+		default:
+			break;
+		}
+		hmi.MainLoop();
+		hmi.robKeyDetect();
+		usleep(10000); //10ms
+		if(tick++ > 300)
+		{
+			tick = 0;
+			data++;
+		}
+	}
+	
+}
+#endif
+int main(int argc, char **argv)
+{
+	//hmi_test();
+	//test_moveLine();
+	//test_step_move();
+	//test_step_move();
+	//test_stop();
+    //testCLiffLoop();
+
+    //testIni();
+    //loadIni();
+    //return 0;
+	return 0;
+    lcm::LCM lcm_;
+    SensorMsg::PointCloud_t xd1qData;
+    std::shared_ptr<XLog> xlogPtr = std::make_shared<XLog>(true);
+    xlogPtr->Initialise("test.log");
+    xlogPtr->SetThreshold(XLOG_LEVEL::XLOG_LEVEL_INFO);
+    std::shared_ptr<XBase_t> xbasePt = std::make_shared<XBase_t>(&lcm_, nullptr, nullptr);
+    xbasePt->Init();
+    int tick=0;
+    
+    xbasePt->startClean();
+    while (true)
+    {
+
+        tick++;
+        xbasePt->UpdateInput();
+
+        if(tick < 200)
+        {
+            //xbasePt->setSpeed(0.3, 0);
+            xbasePt->setMainBrushDuty(50);
+            printf("Stop MainBrush for 4 seconds!\r\n");
+        }
+        else if(tick < 250)
+        {
+            printf("Stop MainBrush for 1 second!\r\n");
+            xbasePt->setMainBrushDuty(0);
+            NavPose pose = xbasePt->getOdomPose();
+            tick = 0;
+            //printf("tick=%d (%.2f, %.2f, %.2f)\r\n", tick,  pose.px, pose.py, pose.pa);
+        }
+        else
+        {
+            exit(0);
+        }
+
+
+#if 0  // test motor control
+        if(tick % 200 == 0)
+        {
+            xbasePt->setLeftBrushDuty(30);
+            xbasePt->setRighBrushDuty(30);
+        }
+        else if(tick % 100 == 0)
+        {
+            xbasePt->setLeftBrushDuty(60);
+            xbasePt->setRighBrushDuty(60);
+        }
+            
+        // code here
+        xd1qData = xbasePt->getXD1QPointCloud();
+        
+        
+        for (size_t i = 0; i < xd1qData.pointsNum; i++)
+        {
+            /* code 
+            if(i % 2 == 0)
+                xlogPtr->EnableCout(true);
+            else 
+                xlogPtr->EnableCout(false);
+            */
+            xlogPtr->Debug("i=%d (%.2f, %.2f, %.2f)", i, xd1qData.x[i], xd1qData.y[i], xd1qData.z[i]);
+        }
+        
+        if(tick % 2 == 0)
+            xlogPtr->EnableCout(true);
+        else 
+            xlogPtr->EnableCout(false);
+#endif
+        //xlogPtr->Debug("tick=%d testHere!", tick);
+        xbasePt->UpdateOutput();
+    }    
+}

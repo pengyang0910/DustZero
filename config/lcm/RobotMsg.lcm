@@ -1,0 +1,124 @@
+package RobotMsg;
+
+struct RobotStatus_t
+{
+    int64_t timestamp_us;
+    string name;
+
+    int8_t leftWheelDuty;
+    int8_t rightWheelDuty;
+    int8_t fanDuty;
+    int8_t leftBrushDuty;
+    int8_t rightBrushDuty;
+    int8_t mainBrushDuty;
+    int8_t mainBrushUpDownDuty;
+    int8_t mopDuty;
+    int8_t pumpDuty;
+    int8_t mainBrushLiftDuty;
+
+    int32_t leftWheelPulses;
+    int32_t rightWheelPulses;
+    int32_t fanPulses;
+
+    byte leftWheelCurrent;
+    byte rightWheelCurrent;
+    byte fanCurrent;
+    byte leftBrushCurrent;
+    byte rightBrushCurrent;
+    byte mainBrushCurrent;
+    byte cliffLeftAdc;
+    byte cliffLeftLeftAdc;
+    byte cliffRightAdc;
+    byte cliffRightRightAdc;
+    byte cliffRightFrontAdc;
+    byte cliffLeftFrontAdc;
+    byte batterryAdc;
+    byte batterryNtcAdc;
+    byte mainBrushLiftCurrent;
+
+    boolean dustBoxMissing;
+    boolean waterBoxMissing;
+    boolean leftBumped;
+    boolean rightBumped;
+    boolean leftWheelError;
+    boolean rightWheelError;
+    boolean leftWheelSuspend;
+    boolean rightWheelSuspend;
+    boolean powerIsChargering;
+    boolean bumperProcessing;
+    boolean chargeIsComplete;
+    boolean isBatteryOn;
+    boolean mBrushUpDownTrigger;
+    boolean mopLeftHall;
+    boolean mopRightHall;
+    boolean rightBrushHall;
+    boolean hardFloor;
+    boolean mBrushLimit1;
+    boolean mBrushLimit2;
+
+    int16_t mopMotorCurrent;
+    int16_t mBrushUpDownCurrent;
+
+    int16_t leftWheelTempDeg;
+    int16_t rightWheelTempDeg;
+    boolean imuNeedStop;
+    boolean mopLeftIR;
+    boolean mopRightIR;
+
+    byte leftIrStatus;
+    byte rightIrStatus;
+
+    int16_t proximityDistMm;
+
+    int16_t q0;
+    int16_t q1;
+    int16_t q2;
+    int16_t q3;
+
+    int16_t xPosMm;
+    int16_t yPosMm;
+    int16_t yawMilliRad;
+
+    int16_t fdkVSpdMm;
+    int16_t fdkWSpdMilliRad;
+    int16_t tarVspdMm;
+    int16_t tarWspdMilliRad;
+	
+	int16_t seq;
+    boolean slideDetected;
+}
+
+
+struct Power_t
+{
+    int64_t timestamp_us;
+    string name;
+    float percent;
+    boolean isChargering;
+    boolean isChargeComplete;
+}
+
+struct MotorDutyCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    int8_t duty;
+}
+
+struct HairCutCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean enable;
+}
+
+struct HackCmd_t
+{
+    int32_t data;
+}
+
+struct BumperForSlam_t
+{
+    int64_t timestamp_us;
+    boolean bumped;
+}

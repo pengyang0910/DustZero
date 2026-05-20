@@ -1,0 +1,101 @@
+package SensorMsg;
+
+struct PointCloud_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t pointsNum;
+    float x[pointsNum];
+    float y[pointsNum];
+    float z[pointsNum];
+}
+
+struct LaserData_t
+{
+    int64_t timestamp_us;
+    string name;
+    float xPos;
+    float yPos;
+    float zPos;
+    float roll;
+    float pitch;
+    float yaw;
+    int32_t range_num;
+    float ranges[range_num];
+    float bearing[range_num];
+    float min_bearing;
+    float max_bearing;
+    float min_range;
+    float max_range;
+    float resolution;
+}
+
+struct ImuData_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t seq;
+    float q0;
+    float q1;
+    float q2;
+    float q3;
+    float acc0;
+    float acc1;
+    float acc2;
+    float gyro0;
+    float gyro1;
+    float gyro2;
+}
+
+struct LaserInfo_t
+{
+    int64_t timestamp_us;
+    int32_t range_num;
+    float min_bearing;
+    float max_bearing;
+    float min_range;
+    float max_range;
+    float resolution;
+}
+
+struct Bumper_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean leftBumped;
+    boolean rightBumped;
+    boolean isProcessing;
+}
+
+struct WallSensor_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t distMm;
+}
+
+struct Cliff_t
+{
+    int64_t timestamp_us;
+    string  name;
+    int32_t leftLeft;
+    int32_t left;
+    int32_t rightRight;
+    int32_t right;
+    int32_t rightFront;
+    int32_t leftFront;
+}
+
+struct Dock_t
+{
+    int64_t timestamp_us;
+    string name;
+    byte hsConfidence;
+    float hsDistance;
+    float hsAngle;
+    float hsOriention;
+    
+}
+
+
+

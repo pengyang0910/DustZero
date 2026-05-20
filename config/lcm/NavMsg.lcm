@@ -1,0 +1,247 @@
+package NavMsg;
+
+
+struct SlamCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean startSlam;
+    boolean resetSlam;
+}
+
+struct AmclCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean startAmcl;
+    boolean resetAcml;
+}
+
+struct SlamMapRequest_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean requestMap;
+}
+
+struct Odom_t
+{
+    int64_t timestamp_us;
+    string name;
+    float fkVSpd;
+    float fkWSpd;
+    float tarVSpd;
+    float tarWSpd;
+    float px;
+    float py;
+    float pa;
+
+    float score;
+}
+
+struct SlamPoseInfo_t
+{
+    int64_t timestamp_us;
+    string name;
+    
+    float score;
+    float laserCnt;
+    float ratio; 
+}
+
+struct VelCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+
+    boolean motorEnable;
+
+    float vSpd;
+    float wSpd;
+
+    boolean spdLoopEnable;
+    boolean resetOdom;
+    boolean bumperManualBack;
+}
+
+struct Point_t
+{
+    float x;
+    float y;
+    float z;
+}
+
+struct Pose_t
+{
+    int64_t timestamp_us;
+    float px;
+    float py;
+    float pa;
+    float paStable;
+    boolean paValid;
+}
+
+struct Polygon_t
+{
+    int32_t id;
+    float zPa;
+    Pose_t wallPose;
+    boolean isCleaned;
+    boolean isRecognized;
+    int32_t pointNum;
+    Point_t points[pointNum];
+    int32_t pointRawNum;
+    Point_t pointsRaw[pointRawNum];
+    int32_t entryNum;
+    int32_t nextBlkIdOfEntries[entryNum];
+    Pose_t entryPoses[entryNum];
+    int32_t forbiddenBothNum;
+    float forbiddenBothZones[forbiddenBothNum];
+    int32_t forbiddenMopNum;
+    float forbiddenMopZones[forbiddenMopNum];
+    int32_t virwallNum;
+    float virwallZones[virwallNum];
+    int32_t cleanOrder;
+    int32_t cleanTime;
+    int32_t mopTime;
+    boolean mopForbidden;
+    boolean cleanForbidden;
+    int32_t fanRank;
+    int32_t waterBoxRank;
+    int32_t yModeEnable;
+}
+
+struct BlockArray_t
+{
+    int64_t timestamp_us;
+    string name;
+    boolean needMapExplorer;
+    boolean FastMapEnable;
+    int32_t blkNum;
+    Polygon_t blks[blkNum];
+}
+
+struct PoseWithCovariance
+{
+    int64_t timestamp_us;
+    string name;
+    
+    float px;
+    float py;
+    float pa;
+
+    float weight;
+    int32_t covLen;
+    float cov[covLen];
+}
+
+struct AppTraj_t 
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t poseNum;
+    Pose_t  poses[poseNum];
+    int32_t poseType[poseNum];
+}
+
+struct PoseArray_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t poseNum;
+    Pose_t  poses[poseNum];
+}
+
+struct InitialPoseCmd_t
+{
+    int64_t timestamp_us;
+    string name;
+    Pose_t pose;
+    int32_t covLen;
+    int32_t pdfType;
+    float cov[covLen];
+}
+
+struct GridMapInfo_t
+{
+    int64_t timestamp_us;
+    string name;
+
+    int32_t id;
+    int32_t roomNum;
+
+    boolean  hasStationPose;
+    float stationPx;
+    float stationPy;
+    float stationPa;
+
+    float updateTsUs;
+    boolean isStart;
+    int32_t width;
+    int32_t height;
+    float originPx;
+    float originPy;
+    float originPa;
+    float resolution;
+
+}
+
+struct GridMapUpdate_t
+{
+    int64_t timestamp_us;
+    string name;
+
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
+    int32_t dataLen;
+    int8_t data[dataLen];
+}
+
+
+struct RoomProperties_t
+{
+    int32_t roomId;
+    int32_t cleanOrder;
+    int32_t cleanTime;
+    int32_t mopTime;
+    int32_t colorId;
+    boolean forbiddenClean;
+    boolean forbiddenMop;
+    int32_t fanRank;
+    int32_t waterBoxRank;
+    int32_t yModeEnable;
+    string roomName;
+    int32_t reserved1;
+    int32_t reserved2;
+}
+
+struct GridMap_t
+{
+    int64_t timestamp_us;
+    string name;
+
+    string caller;
+    boolean isStart;
+
+    float originPx;
+    float originPy;
+    float originPa;
+    float resolution;
+
+    int32_t width;
+    int32_t height;
+    int32_t dataLen;
+    int8_t data[dataLen];
+
+    int32_t room_num;
+    RoomProperties_t properties[room_num];
+}
+
+struct OriginTimer_t
+{
+    int64_t timestamp_us;
+    string name;
+    int32_t baseTimer;
+}

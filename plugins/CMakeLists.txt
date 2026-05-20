@@ -1,0 +1,8 @@
+add_subdirectory(exception_handler)
+add_subdirectory(daemon_base_station)
+add_subdirectory(relocalization)
+add_subdirectory(dstar_planner)
+add_subdirectory(back_to_dock)
+add_subdirectory(map_explorer)
+add_subdirectory(vir_bumper)
+add_subdirectory(base_station)

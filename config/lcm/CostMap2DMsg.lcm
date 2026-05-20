@@ -1,0 +1,16 @@
+package CostMap2DMsg;
+
+struct PointCloud_t
+{
+    string name;
+    int64_t timestamp_us;
+
+    int32_t PointNum;
+
+    int32_t width;
+    int32_t height;
+
+    float x[PointNum];
+    float y[PointNum];
+    float z[PointNum];
+}
